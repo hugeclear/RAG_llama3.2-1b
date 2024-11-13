@@ -1,0 +1,25 @@
+
+RAG_llama3.2-1b/
+├── backend/
+│   ├── requirements.txt
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   └── main.py
+│   │   ├── models/
+│   │   ├── scrapers/
+│   │   └── utils/
+│   ├── tests/
+│   └── data/
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── styles/
+│   │   └── utils/
+│   └── package.json
+└── docker/
+    ├── docker-compose.yml
+    ├── Dockerfile.backend
+    └── Dockerfile.frontend
+
