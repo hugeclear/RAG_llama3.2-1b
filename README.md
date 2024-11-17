@@ -1,157 +1,138 @@
-# RAG System with LLaMA 3.2-1b
+# RAG System Frontend
 
-[English](#english) | [日本語](#japanese)
+## Overview (English)
+This is the frontend application for the RAG (Retrieval-Augmented Generation) System. It is built using React and TypeScript, and interacts with a backend API powered by LLaMA 3.2-1b to perform document management, search, system statistics, and health checks. This README will guide you through setting up the environment, running the application, and understanding its features.
 
----
-<a name="english"></a>
-# RAG System with LLaMA 3.2-1b [English]
+### Features
+- **Add Document**: Users can add a document to the backend system.
+- **Search**: Users can perform searches on existing documents using keywords.
+- **System Stats**: View the system statistics, including document count and other relevant metadata.
+- **Health Check**: Check the current health status of the backend system.
 
-## Overview
-A Retrieval-Augmented Generation (RAG) system powered by LLaMA 3.2-1b, designed to provide accurate, context-aware responses by combining web-scraped information with powerful language model capabilities.
+### Requirements
+- Node.js and npm installed on your machine.
+- Backend API server for the RAG system running locally or remotely.
 
-## Features
-- Web content scraping and knowledge base creation
-- Semantic search using vector embeddings
-- LLM-powered response generation
-- Source tracking and citation
-- Multilingual support (English/Japanese)
+### Installation and Setup
+1. Clone the repository:
+   ```sh
+   git clone <repository_url>
+   cd RAG_llama3.2-1b/frontend
+   ```
 
-## System Architecture
-- **Web Scraper**: Automated content collection from specified URLs
-- **Vector Store**: ChromaDB-based efficient document storage
-- **LLM Integration**: LLaMA 3.2-1b for response generation
-- **API Layer**: FastAPI-based REST API interface
+2. Install dependencies:
+   ```sh
+   npm install
+   ```
 
-## Use Cases
-1. **Technical Documentation Assistant**
-   - Code explanation and examples
-   - Technical concept clarification
-   - Documentation search and summarization
+3. Run the development server:
+   ```sh
+   npm run dev
+   ```
 
-2. **Research Assistant**
-   - Multi-source information gathering
-   - Content summarization
-   - Source tracking and citation
+   The development server should now be running, usually on `http://localhost:3000`. Open this in your web browser.
 
-3. **Custom Knowledge Base**
-   - Domain-specific document learning
-   - Organization-specific information management
-   - Dynamic content updates
+4. Backend API Setup
+   - Ensure the backend API server is running. The frontend expects it to be available at `http://127.0.0.1:8000`.
+   - You can start the backend by running:
+     ```sh
+     uvicorn main:app --reload
+     ```
 
-## Installation
+### Navigation
+- **Homepage**: A navigation menu provides links to add documents, search documents, view system stats, and perform health checks.
+- **Page Links**: Click on any link in the navigation bar to go to that respective page.
+- **Programmatic Navigation**: Certain actions, like adding a document successfully, will automatically redirect the user to a relevant page.
 
-### Prerequisites
-- Python 3.10+
-- CUDA compatible GPU (recommended)
-- conda environment
+### Adding Documents
+- Navigate to the **Add Document** page.
+- Enter the document content in the provided textarea and click **Add Document**.
+- Upon successful submission, you will be redirected to the homepage.
 
-### Setup
-```bash
-# Create conda environment
-conda create -n rag python=3.10
-conda activate rag
+### Performing a Search
+- Navigate to the **Search** page.
+- Enter a search query and click **Search**.
+- The results will be displayed in a list below the search bar.
 
-# Install dependencies
-pip install -r requirements.txt
-```
+### Viewing System Stats
+- Navigate to the **System Stats** page.
+- You can see information about the number of documents, chunks, and last updated timestamps.
 
-## Usage
-```python
-from rag.system import RAGSystem
+### Health Check
+- Navigate to the **Health Check** page.
+- The current health status of the system will be displayed.
 
-# Initialize system
-rag = RAGSystem()
+### Notes on Further Enhancements
+- **Styling**: Currently, the UI is minimal. Styling can be improved using CSS libraries like Tailwind CSS or styled-components.
+- **Authentication**: Future iterations might include user authentication to restrict access to certain features.
+- **Error Handling**: Better error feedback is recommended to enhance the user experience.
 
-# Add content from URL
-rag.add_from_url("https://example.com/document")
+## 概要 (日本語)
+このフロントエンドアプリケーションは、RAG（Retrieval-Augmented Generation）システム用です。ReactとTypeScriptを使用して構築されており、バックエンドAPI（LLaMA 3.2-1b）と連携してドキュメント管理、検索、システム統計、ヘルスチェックの機能を提供します。このREADMEでは、環境のセットアップ、アプリケーションの実行、および機能の理解について説明します。
 
-# Query the system
-response = rag.get_response("Your question here")
-```
-
-## Development Roadmap
-- [ ] Multimodal support (images, audio)
-- [ ] Advanced search features
-- [ ] Conversation history management
-- [ ] Performance optimization
-- [ ] UI/UX improvements
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-<a name="japanese"></a>
-# RAG システム with LLaMA 3.2-1b [日本語]
-
-## 概要
-LLaMA 3.2-1bを活用したRetrieval-Augmented Generation (RAG) システムです。Webスクレイピングで得た情報と言語モデルの機能を組み合わせて、正確でコンテキストを考慮した応答を提供します。
-
-## 主な機能
-- Webコンテンツのスクレイピングと知識ベース化
-- ベクトル埋め込みを使用した意味検索
-- LLMによる回答生成
-- ソース追跡と引用
-- 多言語対応（日本語/英語）
-
-## システム構成
-- **Webスクレイパー**: 指定URLからのコンテンツ自動収集
-- **ベクトルストア**: ChromaDBを使用した効率的な文書保存
-- **LLM統合**: LLaMA 3.2-1bによる回答生成
-- **APIレイヤー**: FastAPIベースのREST APIインターフェース
-
-## ユースケース
-1. **技術文書アシスタント**
-   - コードの説明と例示
-   - 技術概念の解説
-   - ドキュメント検索と要約
-
-2. **リサーチアシスタント**
-   - 複数ソースからの情報収集
-   - コンテンツの要約
-   - ソース追跡と引用
-
-3. **カスタム知識ベース**
-   - 特定分野の文書学習
-   - 組織固有の情報管理
-   - 動的なコンテンツ更新
-
-## インストール
+### 機能
+- **ドキュメントの追加**: ユーザーはバックエンドシステムにドキュメントを追加できます。
+- **検索**: 既存のドキュメントをキーワードで検索できます。
+- **システム統計**: ドキュメント数など、システムに関する統計情報を表示します。
+- **ヘルスチェック**: バックエンドシステムの現在の稼働状態を確認します。
 
 ### 必要条件
-- Python 3.10以上
-- CUDA対応GPU（推奨）
-- conda環境
+- Node.jsおよびnpmがインストールされていること。
+- ローカルまたはリモートで稼働中のRAGシステム用バックエンドAPIサーバー。
 
-### セットアップ
-```bash
-# conda環境の作成
-conda create -n rag python=3.10
-conda activate rag
+### インストールとセットアップ
+1. リポジトリをクローンします:
+   ```sh
+   git clone <repository_url>
+   cd RAG_llama3.2-1b/frontend
+   ```
 
-# 依存パッケージのインストール
-pip install -r requirements.txt
-```
+2. 依存関係をインストールします:
+   ```sh
+   npm install
+   ```
 
-## 使用方法
-```python
-from rag.system import RAGSystem
+3. 開発サーバーを起動します:
+   ```sh
+   npm run dev
+   ```
 
-# システムの初期化
-rag = RAGSystem()
+   開発サーバーは通常、`http://localhost:3000`で稼働します。ウェブブラウザでこのURLを開いてください。
 
-# URLからコンテンツを追加
-rag.add_from_url("https://example.com/document")
+4. バックエンドAPIのセットアップ
+   - バックエンドAPIサーバーが稼働していることを確認してください。フロントエンドは、`http://127.0.0.1:8000`で利用できることを期待しています。
+   - 以下のコマンドでバックエンドを起動できます:
+     ```sh
+     uvicorn main:app --reload
+     ```
 
-# システムへの問い合わせ
-response = rag.get_response("あなたの質問をここに")
-```
+### ナビゲーション
+- **ホームページ**: ナビゲーションメニューから、ドキュメントの追加、検索、システム統計の表示、ヘルスチェックへのリンクが利用可能です。
+- **ページリンク**: ナビゲーションバーのリンクをクリックすると、該当するページに移動できます。
+- **プログラムによるナビゲーション**: ドキュメント追加の成功時など、特定のアクション後には自動的に関連ページへリダイレクトされます。
 
-## 開発ロードマップ
-- [ ] マルチモーダル対応（画像、音声）
-- [ ] 高度な検索機能
-- [ ] 会話履歴の管理
-- [ ] パフォーマンス最適化
-- [ ] UI/UXの改善
+### ドキュメントの追加
+- **Add Document**ページに移動します。
+- ドキュメント内容をテキストエリアに入力し、**Add Document**ボタンをクリックします。
+- 正常に送信されると、ホームページにリダイレクトされます。
 
-## ライセンス
-このプロジェクトはMITライセンスの下で提供されています - 詳細はLICENSEファイルを参照してください。
+### 検索の実行
+- **Search**ページに移動します。
+- 検索クエリを入力して、**Search**ボタンをクリックします。
+- 結果が検索バーの下にリスト形式で表示されます。
+
+### システム統計の表示
+- **System Stats**ページに移動します。
+- ドキュメント数、チャンク数、最終更新日時などの情報が表示されます。
+
+### ヘルスチェック
+- **Health Check**ページに移動します。
+- システムの現在の稼働状態が表示されます。
+
+### 今後の改善についてのメモ
+- **スタイリング**: 現在のUIはシンプルです。Tailwind CSSやstyled-componentsなどのCSSライブラリを使用して、UIを改善することが推奨されます。
+- **認証**: 今後のバージョンでは、特定の機能へのアクセスを制限するためのユーザー認証を追加することが考えられます。
+- **エラーハンドリング**: より良いエラーフィードバックを提供することで、ユーザーエクスペリエンスを向上させることができます。
+
+これで、システム全体の動作や機能についてREADMEに追加する内容が完成しました。追加の説明や修正が必要な場合は、気軽に教えてください。
+
