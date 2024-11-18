@@ -13,6 +13,7 @@ class LLMConfig:
     top_p: float = 0.9
     repetition_penalty: float = 1.2
     do_sample: bool = True
+    num_beams: int = 5  # ビームサーチのパラメータを追加
 
 class LlamaModel:
     def __init__(self):
@@ -20,6 +21,7 @@ class LlamaModel:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = None
         self.tokenizer = None
+        self.config = LLMConfig()
         print(f"Initializing LlamaModel with device: {self.device}")
 
     def load_model(self) -> bool:
@@ -49,68 +51,77 @@ class LlamaModel:
         except Exception as e:
             print(f"Error loading model: {str(e)}")
             return False
-    
+
     async def generate_response(
         self,
         prompt: str,
-        max_length: int = 512,
+        max_length: int = 2048,
         temperature: float = 0.7,
         top_p: float = 0.9
     ) -> Optional[str]:
-        """応答の生成"""
+        """Generate a response"""
         if not self.model or not self.tokenizer:
             if not self.load_model():
                 return None
 
         try:
-            print(f"\nGenerating response for prompt:\n{prompt}\n")
+            logger.info(f"Processing prompt:\n{prompt}")
+            
+            # プロンプトにanswer:を追加して、回答の開始位置を明確にする
+            complete_prompt = f"{prompt}\nanswer:"
             
             # 入力の準備
             inputs = self.tokenizer(
-                prompt,
+                complete_prompt,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
                 max_length=max_length//2
             ).to(self.device)
             
-            # 生成パラメータ
-            generation_config = {
-                "max_length": max_length,
-                "min_length": 50,  # 最小長さを設定
-                "temperature": temperature,
-                "top_p": top_p,
-                "do_sample": True,
-                "pad_token_id": self.tokenizer.pad_token_id,
-                "eos_token_id": self.tokenizer.eos_token_id,
-                "repetition_penalty": 1.2,
-                "no_repeat_ngram_size": 3,
-                "num_return_sequences": 1,
-                "early_stopping": True
-            }
-            
             # 生成
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    **generation_config
-                )
+            outputs = self.model.generate(
+                **inputs,
+                max_length=max_length,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=True,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                repetition_penalty=1.1
+            )
             
-            # デコード
+            # デコードして応答を取得
             full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            # プロンプト部分を除去してレスポンスを取得
-            response = full_text[len(prompt):].strip()
-            print(f"Generated response:\n{response}\n")
+            # "answer:"以降の部分のみを抽出
+            try:
+                response = full_text.split("answer:")[-1].strip()
+            except:
+                response = full_text[len(complete_prompt):].strip()
             
-            return response if response else "申し訳ありません。適切な回答を生成できませんでした。"
+            logger.info(f"Generated response:\n{response}")
+            
+            if not response:
+                logger.warning("Empty response generated")
+                return None
+                
+            return response
             
         except Exception as e:
-            logger.error(f"Error generating response: {str(e)}")
-            return "エラーが発生しました。もう一度お試しください。"
+            logger.error(f"Error in generation: {str(e)}")
+            logger.exception(e)
+            return None
 
     def __del__(self):
         """クリーンアップ"""
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            print("GPU memory cleared")
+        try:
+            if hasattr(self, 'model'):
+                del self.model
+            if hasattr(self, 'tokenizer'):
+                del self.tokenizer
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                print("GPU memory cleared")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")

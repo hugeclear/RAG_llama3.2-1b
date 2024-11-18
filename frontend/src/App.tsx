@@ -14,7 +14,7 @@ const App: React.FC = () => {
           <h1>RAG System</h1>
           <nav className="main-nav">
             <Link to="/add" className="large-button">Add New Document</Link>
-            <Link to="/search" className="large-button">Find Documents</Link>
+            <Link to="/search" className="large-button">Generate Answer from Documents</Link>
           </nav>
         </div>
 
