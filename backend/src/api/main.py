@@ -20,13 +20,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORSの設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では適切に制限する
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # RAGシステムのグローバルインスタンス
@@ -68,20 +68,19 @@ class SearchQuery(BaseModel):
 
 class SearchResult(BaseModel):
     content: str
-    source: str
-    score: float
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None # "source"を"metadata"内部に移動
 
 class SearchResponse(BaseModel):
-    query: str
-    results: List[SearchResult]
-    processing_time: float
-    timestamp: datetime
+    query: Optional[str] = None
+    answer: str
+    sources: List[SearchResult]
+    processing_time: Optional[float] = None
+    timestamp: Optional[datetime] = None
 
 class SystemStats(BaseModel):
     total_documents: int
     total_chunks: int
-    sources: List[Dict]
+    sources: List[Dict[str, str]]
     last_updated: datetime
 
 # APIエンドポイント
@@ -107,7 +106,7 @@ async def add_document(url_input: URLInput, background_tasks: BackgroundTasks):
             detail=f"Failed to process document: {str(e)}"
         )
 
-@app.post("/api/search", response_model=SearchResponse)
+@app.post("/api/search")
 async def search(query: SearchQuery):
     """コンテンツの検索と回答生成"""
     try:
@@ -120,12 +119,10 @@ async def search(query: SearchQuery):
         )
         
         # 結果の整形
-        results = [
+        sources = [
             SearchResult(
                 content=source["content"],
-                source=source["metadata"].get("source", "unknown"),
-                score=source.get("score", 0.0),
-                metadata=source["metadata"]
+                metadata=source.get("metadata", {})
             )
             for source in response["sources"]
         ]
@@ -133,8 +130,8 @@ async def search(query: SearchQuery):
         processing_time = (datetime.now() - start_time).total_seconds()
         
         return SearchResponse(
-            query=query.query,
-            results=results,
+            answer=response["answer"],
+            sources=sources,
             processing_time=processing_time,
             timestamp=datetime.now()
         )
@@ -144,9 +141,33 @@ async def search(query: SearchQuery):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error during search: {str(e)}")
+        logger.exception(e)  # スタックトレースを出力
         raise HTTPException(
             status_code=500,
             detail=f"Search failed: {str(e)}"
+        )
+
+# main.py に追加
+@app.post("/api/database/clear", response_model=Dict)
+async def clear_database():
+    """データベースの全データを削除"""
+    try:
+        success = await rag_system.clear_database()
+        if success:
+            return {
+                "status": "success",
+                "message": "Database cleared successfully"
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to clear database"
+            )
+    except Exception as e:
+        logger.error(f"Error clearing database: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing database: {str(e)}"
         )
 
 @app.get("/api/stats", response_model=SystemStats)
@@ -154,10 +175,19 @@ async def get_stats():
     """システム統計の取得"""
     try:
         stats = rag_system.get_statistics()
+        sources = [
+            {
+                "url": source.get("url", ""),
+                "title": source.get("title", ""),
+                "chunk_count": source.get("chunk_count", 0),
+                "added_at": source.get("added_at", ""),
+            }
+            for source in stats["sources"]
+        ]
         return SystemStats(
             total_documents=stats["total_documents"],
             total_chunks=stats["total_chunks"],
-            sources=stats["sources"],
+            sources=sources,
             last_updated=datetime.now()
         )
     except Exception as e:
@@ -166,6 +196,8 @@ async def get_stats():
             status_code=500,
             detail=f"Failed to get statistics: {str(e)}"
         )
+
+
 
 @app.get("/api/health")
 async def health_check():
