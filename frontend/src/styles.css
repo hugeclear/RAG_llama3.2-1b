@@ -1,0 +1,85 @@
+/* General Styles */
+.app-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; /* 縦方向の中央配置を実現 */
+  background-color: #1a1a1a; /* 背景色の調整 */
+  padding: 20px;
+  text-align: center;
+}
+
+.main-content {
+  max-width: 600px;
+}
+
+/* Main Navigation with Large Buttons */
+.main-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.large-button {
+  display: inline-block;
+  margin: 20px;
+  padding: 20px 50px; /* ボタンのサイズを調整して中央で目立つように */
+  background-color: #f0ad4e;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.large-button:hover {
+  background-color: #ec971f;
+  transform: scale(1.05); /* マウスホバー時に少し拡大 */
+}
+
+/* Floating Components for Stats and Health */
+.floating-components {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 220px;
+  background-color: #444;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.9rem; /* フォントを小さめにして控えめに */
+}
+
+.floating-components > * {
+  margin-bottom: 15px;
+}
+
+.floating-components h2 {
+  font-size: 1rem;
+}
+
+.floating-components p {
+  font-size: 0.875rem;
+}
+
+/* Small Button Styles for Floating Components */
+.floating-components button {
+  background-color: #6c757d; /* グレーにして控えめに */
+  color: #ffffff;
+  border: none;
+  padding: 8px 15px;
+  margin-top: 5px;
+  font-size: 0.875rem; /* ボタンのフォントサイズを小さく */
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.floating-components button:hover {
+  background-color: #5a6268; /* ホバー時の色を変えてクリック感を出す */
+  transform: scale(1.05); /* ホバー時に少し拡大 */
+}
