@@ -181,28 +181,20 @@ class RAGSystem:
             ])
 
             # シンプルなプロンプト
-            prompt = f"""As a medical expert using the RAG system, please provide a detailed explanation based on the search results.
-Please consider the following context carefully and provide a comprehensive answer.
-
+            prompt = f"""You are medical expert Assistant. please answer the ###Question below refering the ###Context. 
 Question: {query}
 
-Instructions:
-1. Base your answer strictly on the provided context
-2. If the information is medical in nature, include relevant medical details
-3. If the information is not medical or not relevant, clearly state so
-4. Use bullet points or numbered lists where appropriate
-5. Include relevant source references when applicable
+
 
 Context:
 {context}
 
-
+Answer:
 """
-            prompt_alpha = 'answer:'
-            prompt_final = prompt + prompt_alpha
+            
             # 回答生成
             response = await self.llm.generate_response(
-                prompt_final,
+                prompt,
                 max_length=2048,
                 temperature=0.7,
                 top_p=0.9

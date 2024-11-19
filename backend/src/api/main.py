@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl, validator
@@ -13,13 +13,26 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# FastAPIアプリケーションの初期化
+# FastAPIアプリケーションの初期化（重複を削除）
 app = FastAPI(
     title="RAG System API",
     description="LLaMA 3.2-1bを使用したRAGシステムのAPI",
     version="1.0.0"
 )
 
+# タイムアウト設定
+@app.middleware("http")
+async def timeout_middleware(request: Request, call_next):
+    try:
+        response = await asyncio.wait_for(call_next(request), timeout=180.0)  # 3分
+        return response
+    except asyncio.TimeoutError:
+        return JSONResponse(
+            status_code=504,
+            content={"detail": "Request timeout"}
+        )
+
+# CORS設定
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
