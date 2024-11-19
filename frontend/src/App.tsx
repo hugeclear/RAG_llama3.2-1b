@@ -15,10 +15,7 @@ const App: React.FC = () => {
         <div className="main-content">
           <h1>Medical & Code RAG</h1>
           <div className="genrate-content">
-            {/* <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-gray-600"> */}
               <AddDocumentForm />
-            {/* </div>
-            <div className="w-full md:w-1/2"> */}
               <SearchComponent />
           </div>
           {/* <div className="floating-components">
@@ -26,7 +23,6 @@ const App: React.FC = () => {
             <HealthComponent />
           </div> */}
         </div>
-        {/* Stats and Health components positioned in the bottom right */}
       </div>
     </Router>
   );

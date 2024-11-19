@@ -25,7 +25,6 @@ body {
   border-radius: 1rem;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  /* position: relative; */
 }
 
 .input-area {
@@ -37,7 +36,7 @@ body {
   color: white;
   margin-top: 0.25rem;
   margin-bottom: 1rem;
-  box-sizing: border-box; /* Ensures proper alignment with other elements */
+  box-sizing: border-box; 
   resize: none;
 }
 
@@ -106,10 +105,10 @@ body {
 
 @media (max-width: 768px) {
   .genrate-content > * {
-    flex: 1 1 100%; /* Stack vertically on smaller screens */
+    flex: 1 1 100%; 
   }
 }
-/* Dropdown styles */
+
 .dropdown {
   width: 100%;
   padding: 0.75rem;
@@ -120,7 +119,6 @@ body {
   margin-bottom: 1rem;
 }
 
-/* Results area */
 .results-box {
   background-color: #2a2b40;
   border-radius: 1rem;
@@ -141,7 +139,6 @@ body {
   text-decoration: underline;
 }
 
-/* Floating Components for Stats and Health */
 .floating-components {
   position: fixed;
   bottom: 20px;
@@ -152,7 +149,7 @@ body {
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   color: #fff;
-  font-size: 0.9rem; /* フォントを小さめにして控えめに */
+  font-size: 0.9rem; 
 }
 
 .floating-components > * {
@@ -168,12 +165,12 @@ body {
 }
 
 .floating-components button {
-  background-color: #6c757d; /* グレーにして控えめに */
+  background-color: #6c757d; 
   color: #ffffff;
   border: none;
   padding: 8px 15px;
   margin-top: 5px;
-  font-size: 0.875rem; /* ボタンのフォントサイズを小さく */
+  font-size: 0.875rem; 
   font-weight: bold;
   border-radius: 5px;
   cursor: pointer;
@@ -181,8 +178,8 @@ body {
 }
 
 .floating-components button:hover {
-  background-color: #5a6268; /* ホバー時の色を変えてクリック感を出す */
-  transform: scale(1.05); /* ホバー時に少し拡大 */
+  background-color: #5a6268; 
+  transform: scale(1.05);
 }
 
 
@@ -203,12 +200,10 @@ body {
   }
 }
 
-/* Adjust content box padding */
 .content-box {
   padding: 1.5rem;
 }
 
-/* Remove margin from the last content box */
 .main-content > div > div:last-child .content-box {
   margin-bottom: 0;
 }
