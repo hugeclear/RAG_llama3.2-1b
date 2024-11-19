@@ -1,0 +1,82 @@
+.sidebar {
+  width: 240px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff; 
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2); 
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2); 
+}
+
+.header {
+  margin-bottom: 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2); 
+  padding-bottom: 8px;
+}
+
+.team-title {
+  font-weight: bold;
+  color: #ffffff; 
+  line-height: 0.95; 
+}
+
+.team-title .team {
+  font-size: 80px; 
+}
+
+.team-title .medical {
+  font-size: 50px; 
+  margin-left: 8px; 
+}
+
+.top-section, .middle-section, .bottom-section {
+  margin-bottom: 16px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.2); 
+}
+
+.icon {
+  margin-right: 8px;
+  font-size: 18px;
+  color: #00aaff; 
+}
+
+.bullet {
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.6); 
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 16px 0 8px;
+  color: rgba(255, 255, 255, 0.8); 
+}
+
+.bottom-section {
+  margin-top: auto;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.bottom-section .sidebar-item {
+  justify-content: center;
+  font-weight: bold;
+}

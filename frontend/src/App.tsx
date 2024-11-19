@@ -5,29 +5,28 @@ import SearchComponent from './components/SearchComponent';
 import StatsComponent from './components/StatsComponent';
 import HealthComponent from './components/HealthComponent';
 import './styles.css';
+import Sidebar from './components/Sidebar';
 
 const App: React.FC = () => {
   return (
     <Router>
       <div className="app-container">
+         <Sidebar />
         <div className="main-content">
-          <h1>medical & code RAG</h1>
-          <nav className="main-nav">
-            <Link to="/add" className="large-button">Add New Document</Link>
-            <Link to="/search" className="large-button">Generate Answer from Documents</Link>
-          </nav>
+          <h1>Medical & Code RAG</h1>
+          <div className="genrate-content">
+            {/* <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-gray-600"> */}
+              <AddDocumentForm />
+            {/* </div>
+            <div className="w-full md:w-1/2"> */}
+              <SearchComponent />
+          </div>
+          {/* <div className="floating-components">
+            <StatsComponent />
+            <HealthComponent />
+          </div> */}
         </div>
-
-        <Routes>
-          <Route path="/add" element={<AddDocumentForm />} />
-          <Route path="/search" element={<SearchComponent />} />
-        </Routes>
-
         {/* Stats and Health components positioned in the bottom right */}
-        <div className="floating-components">
-          <StatsComponent />
-          <HealthComponent />
-        </div>
       </div>
     </Router>
   );
