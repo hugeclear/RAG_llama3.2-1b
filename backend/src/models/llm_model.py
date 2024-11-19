@@ -96,9 +96,9 @@ class LlamaModel:
             
             # "answer:"以降の部分のみを抽出
             try:
-                response = full_text.split("answer:")[-1].strip()
+                response = full_text.split("Answer:")[-1].strip()
             except:
-                response = full_text[len(complete_prompt):].strip()
+                response = None
             
             logger.info(f"Generated response:\n{response}")
             
