@@ -1,10 +1,16 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from abc import ABC, abstractmethod
 from typing import Optional
 import logging
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+class BaseLLM(ABC):
+    @abstractmethod
+    async def generate_response(self, prompt: str, max_length: int, temperature: float, top_p: float) -> str:
+        pass
 
 @dataclass
 class LLMConfig:
@@ -14,6 +20,7 @@ class LLMConfig:
     repetition_penalty: float = 1.2
     do_sample: bool = True
     num_beams: int = 5  # ビームサーチのパラメータを追加
+
 
 class LlamaModel:
     def __init__(self):
