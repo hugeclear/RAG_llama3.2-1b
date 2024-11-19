@@ -26,52 +26,52 @@ const AddDocumentForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Document URL
-          </label>
+    <div className="content-box">
+      <h2 className="text-xl font-semibold mb-4">Add Document</h2>
+      
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-sm mb-2">Document URL</label>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             placeholder="https://example.com"
+            className="input-area"
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Category
-          </label>
+        <div className="mb-4">
+          <label className="block text-sm mb-2">Category</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="input-area"
           >
             <option value="general">General</option>
             <option value="code">Code</option>
           </select>
         </div>
 
-        {error && (
-          <div className="text-red-600 text-sm">{error}</div>
-        )}
-
-        {success && (
-          <div className="text-green-600 text-sm">{success}</div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          {isLoading ? 'Adding...' : 'Add Document'}
-        </button>
+        <div className="button-wrapper">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="submit-button"
+          >
+            {isLoading ? 'Adding...' : 'Add Document'}
+          </button>
+        </div>
       </form>
+
+      {error && (
+        <div className="mt-4 text-red-400">{error}</div>
+      )}
+
+      {success && (
+        <div className="mt-4 text-green-400">{success}</div>
+      )}
     </div>
   );
 };
