@@ -125,3 +125,94 @@ class LlamaModel:
                 print("GPU memory cleared")
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
+
+
+class CodeLlamaModel(BaseLLM):
+    def __init__(self, device: str = None):
+        super().__init__(device)
+        self.model_id = "tyson0420/codellama-7B-instruct-slerp"
+        self.model = None
+        self.tokenizer = None
+        print(f"Initializing CodeLlamaModel with device: {self.device}")
+
+    def load_model(self) -> bool:
+        try:
+            print("Loading tokenizer...")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_id,
+                token=True,
+            )
+            
+            print("Loading model...")
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                device_map="auto",
+                torch_dtype=torch.float16,
+                token=True,
+                low_cpu_mem_usage=True
+            )
+            
+            print("CodeLlama model loaded successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            return False
+
+    async def generate_response(
+        self,
+        prompt: str,
+        max_length: int = 2048,
+        temperature: float = 0.7,
+        top_p: float = 0.9
+    ) -> Optional[str]:
+        if not self.model or not self.tokenizer:
+            if not self.load_model():
+                return None
+
+        try:
+            # CodeLLaMa用のプロンプトフォーマット
+            formatted_prompt = f"[INST] {prompt} [/INST]"
+            
+            inputs = self.tokenizer(
+                formatted_prompt,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=max_length//2
+            ).to(self.device)
+            
+            outputs = self.model.generate(
+                **inputs,
+                max_length=max_length,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=True,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                repetition_penalty=1.1
+            )
+            
+            full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # [INST]タグの後の部分を抽出
+            try:
+                response = full_text.split("[/INST]")[-1].strip()
+            except:
+                response = full_text[len(formatted_prompt):].strip()
+            
+            return response
+
+        except Exception as e:
+            logger.error(f"Error in CodeLLaMa generation: {str(e)}")
+            logger.exception(e)
+            return None
+
+    def __del__(self):
+        if hasattr(self, 'model'):
+            del self.model
+        if hasattr(self, 'tokenizer'):
+            del self.tokenizer
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            print("GPU memory cleared for CodeLLaMa")

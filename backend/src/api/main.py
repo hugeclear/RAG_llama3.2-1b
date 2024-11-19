@@ -48,6 +48,7 @@ rag_system = RAGSystem()
 # リクエスト/レスポンスモデル
 class URLInput(BaseModel):
     url: HttpUrl
+    category: str = "general"  # "general" または "code"
     tags: Optional[List[str]] = []
 
     @validator('url')
@@ -55,12 +56,25 @@ class URLInput(BaseModel):
         if not str(v):
             raise ValueError('URL must not be empty')
         return v
+        
+    @validator('category')
+    def validate_category(cls, v):
+        if v not in ["general", "code"]:
+            raise ValueError('Category must be either "general" or "code"')
+        return v
 
 class SearchQuery(BaseModel):
     query: str
-    k: Optional[int] = 3
+    k: Optional[int] = 2
     threshold: Optional[float] = 0.0
-
+    model: Optional[str] = "llama" #default model
+    
+    @validator('model')
+    def validate_model(cls, v):
+        if v not in ["llama", "codellama"]:
+            raise ValueError('Invalid model')
+        return v
+    
     @validator('query')
     def query_must_not_be_empty(cls, v):
         if not v or not v.strip():
@@ -121,44 +135,23 @@ async def add_document(url_input: URLInput, background_tasks: BackgroundTasks):
 
 @app.post("/api/search")
 async def search(query: SearchQuery):
-    """コンテンツの検索と回答生成"""
     try:
-        start_time = datetime.now()
-        
-        # 検索と回答生成
         response = await rag_system.generate_answer(
             query.query,
             query.k,
+            model_type=query.model_type
         )
-        
-        # 結果の整形
-        sources = [
-            SearchResult(
-                content=source["content"],
-                metadata=source.get("metadata", {})
-            )
-            for source in response["sources"]
-        ]
-        
-        processing_time = (datetime.now() - start_time).total_seconds()
         
         return SearchResponse(
             answer=response["answer"],
-            sources=sources,
+            sources=response["sources"],
             processing_time=processing_time,
             timestamp=datetime.now()
         )
-        
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error during search: {str(e)}")
-        logger.exception(e)  # スタックトレースを出力
-        raise HTTPException(
-            status_code=500,
-            detail=f"Search failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # main.py に追加
 @app.post("/api/database/clear", response_model=Dict)

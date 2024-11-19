@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from .llm_model import LlamaModel
+from .llm_model import LlamaModel, CodeLlamaModel  # CodeLlamaModelをインポート
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -10,52 +10,93 @@ import os
 import io
 import numpy as np
 from PyPDF2 import PdfReader
+from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
 class RAGSystem:
-    def __init__(self):
+    def __init__(self, model_type: str = "llama"):
         self.embeddings = HuggingFaceEmbeddings(
             model_name="intfloat/multilingual-e5-small",
             model_kwargs={'device': 'cuda'}
         )
         
-        # ベクトルストアのパスを設定
-        self.persist_directory = "./data/chroma_db"
-        os.makedirs(self.persist_directory, exist_ok=True)
+        # 2つのベクトルストアのパスを設定
+        self.persist_directory_general = "./data/chroma_db_general"
+        self.persist_directory_code = "./data/chroma_db_code"
+        os.makedirs(self.persist_directory_general, exist_ok=True)
+        os.makedirs(self.persist_directory_code, exist_ok=True)
         
-        # ベクトルストアの初期化
-        self.vectorstore = Chroma(
-            persist_directory=self.persist_directory,
-            embedding_function=self.embeddings
+        # 2つのベクトルストアの初期化
+        self.vectorstore_general = Chroma(
+            persist_directory=self.persist_directory_general,
+            embedding_function=self.embeddings,
+            collection_name="general_documents"
         )
         
-        self.llm = LlamaModel()
-        self.sources = {}
+        self.vectorstore_code = Chroma(
+            persist_directory=self.persist_directory_code,
+            embedding_function=self.embeddings,
+            collection_name="code_documents"
+        )
+        
+        # モデルの初期化
+        self.model_classes = {
+            "llama": LlamaModel,
+            "codellama": CodeLlamaModel
+        }
+        
+        self.model_type = model_type
+        self.llm = self._initialize_model(model_type)
+        
+        # ソース管理用（カテゴリ別）
+        self.sources = {
+            "general": {},
+            "code": {}
+        }
         
         # チャンクサイズの設定
-        self.chunk_size = 500  # トークン数
-        self.chunk_overlap = 50  # オーバーラップするトークン数
+        self.chunk_size = 500
+        self.chunk_overlap = 50
+        
+        # トークナイザーの初期化
+        self.tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-small")
 
-    async def clear_database(self) -> bool:
-        """ベクトルストアとソース情報を完全に削除"""
+    def _initialize_model(self, model_type: str):
+        """モデルの初期化"""
+        if model_type not in self.model_classes:
+            raise ValueError(f"Unknown model type: {model_type}")
+        
+        model_class = self.model_classes[model_type]
+        return model_class()
+    async def clear_database(self, category: str = None) -> bool:
+        """データベースのクリア（カテゴリ指定可能）"""
         try:
-            logger.info("Clearing vector store and source information...")
+            logger.info(f"Clearing database for category: {category if category else 'all'}")
             
-            # Chromaデータベースの削除
-            if os.path.exists(self.persist_directory):
-                import shutil
-                shutil.rmtree(self.persist_directory)
-                os.makedirs(self.persist_directory, exist_ok=True)
-            
-            # ベクトルストアの再初期化
-            self.vectorstore = Chroma(
-                persist_directory=self.persist_directory,
-                embedding_function=self.embeddings
-            )
-            
-            # ソース情報のクリア
-            self.sources = {}
+            if category in ['general', None]:
+                if os.path.exists(self.persist_directory_general):
+                    import shutil
+                    shutil.rmtree(self.persist_directory_general)
+                    os.makedirs(self.persist_directory_general, exist_ok=True)
+                self.vectorstore_general = Chroma(
+                    persist_directory=self.persist_directory_general,
+                    embedding_function=self.embeddings,
+                    collection_name="general_documents"
+                )
+                self.sources["general"] = {}
+                
+            if category in ['code', None]:
+                if os.path.exists(self.persist_directory_code):
+                    import shutil
+                    shutil.rmtree(self.persist_directory_code)
+                    os.makedirs(self.persist_directory_code, exist_ok=True)
+                self.vectorstore_code = Chroma(
+                    persist_directory=self.persist_directory_code,
+                    embedding_function=self.embeddings,
+                    collection_name="code_documents"
+                )
+                self.sources["code"] = {}
             
             logger.info("Database cleared successfully")
             return True
@@ -68,21 +109,14 @@ class RAGSystem:
     def chunk_text(self, text: str) -> List[str]:
         """テキストを指定されたトークン数で分割"""
         try:
-            from transformers import AutoTokenizer
-            
-            # トークナイザーの初期化
-            tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-small")
-            
-            # テキストのトークン化
-            tokens = tokenizer.encode(text)
+            tokens = self.tokenizer.encode(text)
             chunks = []
             
-            # チャンクの作成
             start = 0
             while start < len(tokens):
                 end = start + self.chunk_size
                 chunk_tokens = tokens[start:end]
-                chunk_text = tokenizer.decode(chunk_tokens, skip_special_tokens=True)
+                chunk_text = self.tokenizer.decode(chunk_tokens, skip_special_tokens=True)
                 chunks.append(chunk_text)
                 start += (self.chunk_size - self.chunk_overlap)
             
@@ -90,67 +124,98 @@ class RAGSystem:
             
         except Exception as e:
             logger.error(f"Error chunking text: {str(e)}")
-            return [text]  # エラーの場合は元のテキストを1つのチャンクとして返す
+            return [text]
 
-    def calculate_cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
-        """ベクトル間のコサイン類似度を計算"""
-        return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
-
-    async def search_documents(self, query: str, k: int = 3, threshold: float = 0.5) -> List[Dict]:
-        """MMRを使用して関連文書を検索"""
+    async def add_from_url(self, url: str, category: str = "general") -> bool:
+        """URLからコンテンツを追加（カテゴリ指定可能）"""
         try:
-            # クエリの埋め込みを取得
-            query_embedding = self.embeddings.embed_query(query)
-
-            # より多くの候補を取得
-            fetch_k = min(k * 3, 15)  # 初期候補数を増やす
-            lambda_mult = 0.8  # 類似性をより重視
-
-            # MMR検索の実行
-            results = self.vectorstore.max_marginal_relevance_search(
-                query,
-                k=k,
-                fetch_k=fetch_k,
-                lambda_mult=lambda_mult,
-            )
-
-            # より厳密な類似度チェックとフィルタリング
-            filtered_results = []
-            for doc in results:
-                doc_embedding = self.embeddings.embed_documents([doc.page_content])[0]
-                similarity = self.calculate_cosine_similarity(query_embedding, doc_embedding)
-                
-                # 類似度の閾値を調整
-                if similarity >= threshold:
-                    # キーワードマッチングによる追加フィルタリング
-                    query_words = set(query.lower().split())
-                    content_words = set(doc.page_content.lower().split())
-                    word_overlap = len(query_words & content_words)
-                    
-                    if word_overlap > 0:  # 少なくとも1つのキーワードが一致
-                        filtered_results.append({
-                            'content': doc.page_content,
-                            'metadata': doc.metadata,
-                            'similarity_score': similarity,
-                            'keyword_match': word_overlap
-                        })
-
-            # 類似度とキーワードマッチの組み合わせでソート
-            filtered_results.sort(key=lambda x: (x['similarity_score'], x['keyword_match']), reverse=True)
+            logger.info(f"Scraping content from URL: {url} for category: {category}")
             
-            logger.info(f"Found {len(filtered_results)} relevant documents")
-            return filtered_results
+            if category not in ["general", "code"]:
+                logger.error(f"Invalid category: {category}")
+                return False
+            
+            # Webページの取得
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=100)
+            response.raise_for_status()
+            
+            text_content = []
+            title = url
 
+            # PDFの処理
+            if url.lower().endswith('.pdf'):
+                text_content, title = self._process_pdf(response.content, url)
+            # Wikipediaの処理
+            elif 'wikipedia.org' in url:
+                text_content, title = self._process_wikipedia(response.content, url)
+            # 通常のWebページの処理
+            else:
+                text_content, title = self._process_webpage(response.content, url)
+
+            if not text_content:
+                logger.warning(f"No content extracted from {url}")
+                return False
+
+            logger.info(f"Extracted {len(text_content)} chunks from {url}")
+            
+            # メタデータの準備
+            metadata = [
+                {
+                    'source': url,
+                    'title': title,
+                    'timestamp': datetime.now().isoformat(),
+                    'chunk_index': i,
+                    'total_chunks': len(text_content),
+                    'category': category
+                }
+                for i in range(len(text_content))
+            ]
+            
+            # カテゴリに応じたベクトルストアを選択
+            vectorstore = self.vectorstore_code if category == "code" else self.vectorstore_general
+            
+            # ベクトルストアに追加
+            try:
+                vectorstore.add_texts(
+                    texts=text_content,
+                    metadatas=metadata
+                )
+                
+                # ソース情報の保存
+                self.sources[category][url] = {
+                    'title': title,
+                    'chunk_count': len(text_content),
+                    'added_at': datetime.now().isoformat(),
+                    'content_type': 'pdf' if url.lower().endswith('.pdf') else 'web',
+                    'category': category
+                }
+                
+                logger.info(f"Successfully added content from {url} with {len(text_content)} chunks to {category} database")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error adding chunks to vector store: {str(e)}")
+                return False
+                
         except Exception as e:
-            logger.error(f"Error in document search: {str(e)}")
-            logger.exception(e)
-            return []
+            logger.error(f"Error adding content from URL: {str(e)}")
+            return False
 
-    async def generate_answer(self, query: str, k: int = 2) -> Dict:  # k=2に変更
-        """Generate an answer to the question"""
+    async def generate_answer(self, query: str, k: int = 2, model_type: str = None) -> Dict:
+        """Generate an answer using the specified model"""
         try:
-            # 上位2つの関連文書を検索
-            docs = self.vectorstore.similarity_search_with_relevance_scores(query, k=1)
+            if model_type and model_type != self.model_type:
+                self.model_type = model_type
+                self.llm = self._initialize_model(model_type)
+
+            # モデルタイプに応じてベクトルストアを選択
+            vectorstore = self.vectorstore_code if model_type == "codellama" else self.vectorstore_general
+            
+            # 関連文書の検索
+            docs = vectorstore.similarity_search_with_relevance_scores(query, k=k)
             
             if not docs:
                 return {
@@ -158,7 +223,6 @@ class RAGSystem:
                     'sources': []
                 }
 
-            # 関連性の高い文書を抽出
             relevant_docs = []
             for doc, score in docs:
                 if score >= 0.5:
@@ -174,25 +238,32 @@ class RAGSystem:
                     'sources': []
                 }
 
-            # コンテキストの構築（シンプルに）
+            # コンテキストの構築
             context = "\n\n---\n\n".join([
                 f"{doc['content']}\nSource: {doc['metadata'].get('source', 'Unknown')}"
                 for doc in relevant_docs
             ])
 
-            # シンプルなプロンプト
-            prompt = f"""You are medical expert Assistant. please answer the ###Question below refering the ###Context. 
+            # モデルに応じてプロンプトを選択
+            if model_type == "codellama":
+                prompt = f"""You are an expert programmer. Please answer the following question about programming or technical topics based on the provided context.
+
 Question: {query}
-
-
 
 Context:
 {context}
 
-Answer:
-"""
-            
-            # 回答生成
+Answer:"""
+            else:
+                prompt = f"""You are medical expert Assistant. Please answer the following question based on the provided context.
+
+Question: {query}
+
+Context:
+{context}
+
+Answer:"""
+
             response = await self.llm.generate_response(
                 prompt,
                 max_length=2048,
@@ -226,148 +297,41 @@ Answer:
                 'sources': []
             }
 
-    async def add_from_url(self, url: str) -> bool:
-        """URLからコンテンツを追加"""
-        try:
-            logger.info(f"Scraping content from URL: {url}")
-            
-            # Webページの取得
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            response = requests.get(url, headers=headers, timeout=100)
-            response.raise_for_status()
-            
-            text_content = []
-            title = url
-
-            # PDFの処理
-            if url.lower().endswith('.pdf'):
-                try:
-                    pdf_file = io.BytesIO(response.content)
-                    pdf_reader = PdfReader(pdf_file)
-                    
-                    # PDFから全テキストを抽出
-                    raw_text = ""
-                    for page in pdf_reader.pages:
-                        text = page.extract_text()
-                        if text:
-                            raw_text += text + "\n\n"
-                    
-                    # 抽出したテキストをチャンク分割
-                    text_content = self.chunk_text(raw_text)
-                    title = url.split('/')[-1]
-                    
-                except Exception as e:
-                    logger.error(f"Error processing PDF: {str(e)}")
-                    return False
-
-            # Wikipediaの処理
-            elif 'wikipedia.org' in url:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                main_content = soup.find('div', {'id': 'mw-content-text'})
-                
-                if main_content:
-                    # 不要な要素を削除
-                    for unwanted in main_content.find_all(['table', 'style', 'script', 'sup']):
-                        unwanted.decompose()
-                    
-                    # タイトルの取得
-                    title = soup.title.string if soup.title else url
-                    
-                    # メインコンテンツの抽出と結合
-                    raw_text = main_content.get_text()
-                    # チャンク分割
-                    text_content = self.chunk_text(raw_text)
-                else:
-                    logger.warning(f"No main content found in Wikipedia page: {url}")
-                    return False
-
-            # 通常のWebページの処理
-            else:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                title = soup.title.string if soup.title else url
-                
-                # メインコンテンツの抽出
-                main_elements = soup.find_all(['article', 'main', 'div', 'section'])
-                raw_text = ""
-                
-                for element in main_elements:
-                    # スクリプトやスタイルを除去
-                    for unwanted in element.find_all(['script', 'style']):
-                        unwanted.decompose()
-                    
-                    text = element.get_text(separator=' ', strip=True)
-                    if len(text) > 100:  # 意味のある長さのコンテンツのみ
-                        raw_text += text + "\n\n"
-                
-                # チャンク分割
-                text_content = self.chunk_text(raw_text)
-
-            if not text_content:
-                logger.warning(f"No content extracted from {url}")
-                return False
-
-            logger.info(f"Extracted {len(text_content)} chunks from {url}")
-            
-            # メタデータの準備
-            metadata = [
-                {
-                    'source': url,
-                    'title': title,
-                    'timestamp': datetime.now().isoformat(),
-                    'chunk_index': i,
-                    'total_chunks': len(text_content)
-                }
-                for i in range(len(text_content))
-            ]
-            
-            # ベクトルストアに追加
-            try:
-                self.vectorstore.add_texts(
-                    texts=text_content,
-                    metadatas=metadata
-                )
-                
-                # ソース情報の保存
-                self.sources[url] = {
-                    'title': title,
-                    'chunk_count': len(text_content),
-                    'added_at': datetime.now().isoformat(),
-                    'content_type': 'pdf' if url.lower().endswith('.pdf') else 'web'
-                }
-                
-                logger.info(f"Successfully added content from {url} with {len(text_content)} chunks")
-                return True
-                
-            except Exception as e:
-                logger.error(f"Error adding chunks to vector store: {str(e)}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error adding content from URL: {str(e)}")
-            return False
-    
     def get_statistics(self) -> Dict:
-        """システムの統計情報を取得"""
+        """システムの統計情報を取得（カテゴリ別）"""
         try:
-            return {
-                "total_documents": len(self.sources),
-                "total_chunks": len(self.vectorstore.get()["ids"]),
-                "sources": [
-                    {
-                        "url": url,
-                        "title": info["title"],
-                        "chunks": info["chunk_count"],
-                        "added_at": info["added_at"]
-                    }
-                    for url, info in self.sources.items()
-                ]
+            stats = {
+                "general": {
+                    "total_documents": len(self.sources["general"]),
+                    "total_chunks": len(self.vectorstore_general.get()["ids"]),
+                    "sources": [
+                        {
+                            "url": url,
+                            "title": info["title"],
+                            "chunks": info["chunk_count"],
+                            "added_at": info["added_at"]
+                        }
+                        for url, info in self.sources["general"].items()
+                    ]
+                },
+                "code": {
+                    "total_documents": len(self.sources["code"]),
+                    "total_chunks": len(self.vectorstore_code.get()["ids"]),
+                    "sources": [
+                        {
+                            "url": url,
+                            "title": info["title"],
+                            "chunks": info["chunk_count"],
+                            "added_at": info["added_at"]
+                        }
+                        for url, info in self.sources["code"].items()
+                    ]
+                }
             }
+            return stats
         except Exception as e:
             logger.error(f"Error getting statistics: {str(e)}")
             return {
-                "total_documents": 0,
-                "total_chunks": 0,
-                "sources": []
+                "general": {"total_documents": 0, "total_chunks": 0, "sources": []},
+                "code": {"total_documents": 0, "total_chunks": 0, "sources": []}
             }

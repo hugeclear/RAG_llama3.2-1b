@@ -11,7 +11,7 @@ const App: React.FC = () => {
     <Router>
       <div className="app-container">
         <div className="main-content">
-          <h1>RAG System</h1>
+          <h1>medical & code RAG</h1>
           <nav className="main-nav">
             <Link to="/add" className="large-button">Add New Document</Link>
             <Link to="/search" className="large-button">Generate Answer from Documents</Link>

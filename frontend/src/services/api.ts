@@ -45,10 +45,13 @@ export interface AddDocumentResponse {
 // リクエスト型の定義
 export interface SearchRequest {
   query: string;
+  model_type?: string;  // モデルタイプを追加ng;
 }
 
 export interface AddDocumentRequest {
   url: string;
+  category: string;
+  tags?: string[];
 }
 
 export const search = (request: SearchRequest): Promise<AxiosResponse<SearchResponse>> => {
@@ -62,6 +65,10 @@ export const search = (request: SearchRequest): Promise<AxiosResponse<SearchResp
       };
     });
 };
+
+// モデル切り替え用の新しい関数
+export const switchModel = (model_type: string) => 
+  apiClient.post('/model/switch', { model_type });
 
 export const addDocument = (request: AddDocumentRequest): Promise<AxiosResponse<AddDocumentResponse>> => 
   apiClient.post<AddDocumentResponse>('/documents/add', request);
